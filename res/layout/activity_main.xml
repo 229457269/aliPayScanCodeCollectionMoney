@@ -6,11 +6,18 @@
     tools:context=".MainActivity" >
 
     <Button
-        android:id="@+id/btn"
+        android:id="@+id/btn_ali_pay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="3dp"
-        android:text="点击扫码" />
+        android:text="点击扫描支付宝" />
+    
+   <Button
+        android:id="@+id/btn_we_chat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        android:text="点击扫描微信" />
     
     
     <TextView 

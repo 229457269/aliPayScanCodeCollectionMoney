@@ -24,7 +24,7 @@ import android.widget.Toast;
 
 
 /**
- * 扫码  收款demo测试      使用Socket实现通讯   比较安全
+ * 扫码  收款demo测试      使用Socket实现通讯      比较安全      使用商通道接口
  * com.example.scancodecollectmoney
  * @Email zhaoq_hero@163.com
  * @author zhaoQiang : 2016-2-26
@@ -34,7 +34,15 @@ public class MainActivity extends Activity {
 	private TextView textView1;
 	private TextView textView2;
 	
-	private Button btn;
+	private Button alipay;
+	
+	private Button weChat;
+	
+	private int out_trade_no = 2016030255;
+	
+	private final static int SCANNIN_ALI_CODE = 1;//activity返回码
+	
+	private final static int SCANNIN_WE_CHAT = 0; //微信扫描返回码
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,22 +52,39 @@ public class MainActivity extends Activity {
 		textView1 = (TextView) findViewById(R.id.payCode);
 		textView2 = (TextView)findViewById(R.id.result);
 		
-		btn = (Button) findViewById(R.id.btn);
+		alipay = (Button) findViewById(R.id.btn_ali_pay);
+		weChat = (Button) findViewById(R.id.btn_we_chat);
 		
-		btn.setOnClickListener(new OnClickListener() {
-			
+		/**
+		 * 扫描支付宝
+		 */
+		alipay.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				out_trade_no++; //商户流水号
+				
 				Intent intent = new Intent();
 				intent.setClass(MainActivity.this, MipcaActivityCapture.class);
 				intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-				startActivityForResult(intent, SCANNIN_GREQUEST_CODE);
+				startActivityForResult(intent, SCANNIN_ALI_CODE);
 			}
 		});
 		
+		/**
+		 * 扫描微信：
+		 */
+		weChat.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				out_trade_no++; //商户流水号
+				
+				Intent intent = new Intent();
+				intent.setClass(MainActivity.this, MipcaActivityCapture.class);
+				intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+				startActivityForResult(intent, SCANNIN_WE_CHAT);
+			}
+		});
 	}
-	
-	private final static int SCANNIN_GREQUEST_CODE = 1;
 	
 	/**
 	 * 参数数据：
@@ -79,48 +104,87 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         
-        switch (requestCode) {
-        
-		case SCANNIN_GREQUEST_CODE:
-			
-			if(resultCode == RESULT_OK){
-				
-				Bundle bundle = data.getExtras();
-				//显示扫描到的内容
-				String payId = bundle.getString("result");
-				
-				textView1.setText("付款状态:\n\r付款id:" + payId +"。");
-				textView2.setText("请稍等,正在请求服务器...");
-				
-				//拼接请求参数：data:
-				SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
-				String timestamp = format.format(new Date());    //时间
-				
-				JSONObject testStr = new JSONObject();
-				
-				testStr.put("out_trade_no", "201603011288");  //商户流水号
-				testStr.put("terminal_no", "00000002");  // 本机终端号
-				testStr.put("subject", "酒水");  //消费主题
-				testStr.put("total_fee", "0.01");
-				
-				testStr.put("oto_pid",Content.SHOP_PID);
-				testStr.put("timestamp", timestamp);
-				testStr.put("dynamic_id", payId); //扫描到的条形码
-				
-				/**
-				 * 将数据  转换成键值对的形式      
-				 */
-				Map<String, String> map = MapUtils.getParamsFromJson(JSON.toJSONString(testStr));
-				// 然后对数据按键的字母顺序     进行排序     
-				String prestr = MapUtils.createLinkString(map); 
-				// 获取 排序后的字符串的摘要信息
-				String sign = MD5Util.GetMD5Code(prestr+ Content.PRIVATE_KEY);
-				
-				testStr.put("sign", sign);  //最后将    摘要信息  跟在   参数后面
-				
-				toServer(testStr);
-			}
-			break;
+        if(data!=null){
+        	
+        	Bundle bundle = data.getExtras();
+        	//显示扫描到的内容
+        	String payId = bundle.getString("result");
+        	
+        	textView1.setText("付款状态:\n\r付款id:" + payId +"。");
+        	textView2.setText("请稍等,正在请求服务器...");
+        	
+        	//拼接请求参数：data:
+        	SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
+        	String timestamp = format.format(new Date());    //时间
+        	
+        	JSONObject testStr = new JSONObject();
+        	
+        	switch (requestCode) {
+        	
+	        	case SCANNIN_ALI_CODE://支付宝 扫描
+	        		
+	        		if(resultCode == RESULT_OK){
+	        			
+	        			testStr.put("service", "alipay_pay_2");
+	        			testStr.put("terminal_no", "00000002");  // 本机终端号
+	        			testStr.put("subject", "酒水");  //消费主题
+	        			testStr.put("store_id", "001");
+	        			testStr.put("undiscountable_amount", "0.01");
+	        			testStr.put("total_fee", "0.01");
+	        			testStr.put("out_trade_no", out_trade_no +"");  //商户流水号
+	        			
+	        			testStr.put("timestamp", timestamp);
+	        			testStr.put("dynamic_id", payId); //扫描到的条形码
+	        			testStr.put("oto_pid",Content.SHOP_PID);
+	        			
+	        			/**
+	        			 * 将数据  转换成键值对的形式      
+	        			 */
+	        			Map<String, String> map = MapUtils.getParamsFromJson(JSON.toJSONString(testStr));
+	        			// 然后对数据按键的字母顺序     进行排序     
+	        			String prestr = MapUtils.createLinkString(map); 
+	        			// 获取 排序后的字符串的摘要信息
+	        			String sign = MD5Util.GetMD5Code(prestr+ Content.PRIVATE_KEY);
+	        			
+	        			testStr.put("sign", sign);  //最后将    摘要信息  跟在   参数后面
+	        			
+	        			toServer(testStr);
+	        		}
+	        		break;
+	        		
+	        	case SCANNIN_WE_CHAT: //微信  支付：
+	        		
+	        		if(resultCode == RESULT_OK){
+	        			
+	        			testStr.put("service", "wx_pay");
+	        			testStr.put("terminal_no", "00000002");  // 本机终端号
+	        			testStr.put("subject", "酒水");  //消费主题
+	        			testStr.put("total_fee", "0.01");
+	        			testStr.put("out_trade_no", out_trade_no +"");  //商户流水号
+	        			
+	        			testStr.put("timestamp", timestamp);
+	        			testStr.put("dynamic_id", payId); //扫描到的条形码
+	        			testStr.put("oto_pid",Content.SHOP_PID); 
+	        			
+	        			/**
+	        			 * 将数据  转换成键值对的形式      
+	        			 */
+	        			Map<String, String> map = MapUtils.getParamsFromJson(JSON.toJSONString(testStr));
+	        			// 然后对数据按键的字母顺序     进行排序     
+	        			String prestr = MapUtils.createLinkString(map); 
+	        			// 获取 排序后的字符串的摘要信息
+	        			String sign = MD5Util.GetMD5Code(prestr+ Content.PRIVATE_KEY);
+	        			
+	        			testStr.put("sign", sign);  //最后将    摘要信息  跟在   参数后面
+	        			
+	        			toServer(testStr);
+	        		}
+	        		
+	        		break;
+	        		
+	        	default:
+	        		break;
+        	}
 		}
     }
 
@@ -132,6 +196,7 @@ public class MainActivity extends Activity {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
+				
 				resultStr = SocketToNet.socketTcpRequset(Content.SERVER_IP, Content.SERVER_PORT,
 						testStr);
 				
@@ -155,10 +220,8 @@ public class MainActivity extends Activity {
 					
 					textView2.setText(resultStr);
 					Toast.makeText(MainActivity.this, "支付成功", 1).show();
-					
 					break;
 				}
-	
 				default:
 					break;
 			}
